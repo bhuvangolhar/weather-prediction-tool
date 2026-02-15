@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+
 const App = () => {
   const [weatherType, setWeatherType] = useState('Sunny');
   const [searchInput, setSearchInput] = useState('');
   const [searchedCity, setSearchedCity] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showMap, setShowMap] = useState(false);
 
   const defaultCities = [
     { city: "New York", temp: 22, condition: "Sunny", wind: "12 km/h", humidity: "45%", aqi: "32", icon: "☀️" },
@@ -271,9 +274,65 @@ const App = () => {
 
     .stat-item span { display: block; font-weight: 600; opacity: 1; margin-top: 2px; }
 
+    .map-container {
+      margin: 3rem auto;
+      max-width: 800px;
+      position: relative;
+      z-index: 10;
+    }
+
+    .map-header {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .map-btn {
+      padding: 0.7rem 1.5rem;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: 0.3s;
+      backdrop-filter: blur(5px);
+    }
+
+    .map-btn:hover, .map-btn.active {
+      background: white;
+      color: #000;
+    }
+
+    .map-frame {
+      width: 100%;
+      height: 400px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.2);
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+
+    .map-info {
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(15px);
+      padding: 1.5rem;
+      border-radius: 20px;
+      margin-top: 1.5rem;
+      color: white;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .map-info h3 { margin-bottom: 1rem; font-size: 1.2rem; }
+    .map-info p { margin: 0.5rem 0; opacity: 0.9; }
+
     @media (max-width: 768px) {
       .hero h1 { font-size: 3rem; }
       .container { padding: 1rem; }
+      .map-frame { height: 300px; }
     }
   `;
 
@@ -352,6 +411,45 @@ const App = () => {
               ))}
             </div>
           </header>
+
+          {searchedCity && (
+            <div className="map-container">
+              <div className="map-header">
+                <button 
+                  className={`map-btn ${showMap ? 'active' : ''}`}
+                  onClick={() => setShowMap(!showMap)}
+                >
+                  {showMap ? '🗺️ Hide Map' : '🗺️ Show Map'}
+                </button>
+              </div>
+
+              {showMap && GOOGLE_MAPS_API_KEY && (
+                <>
+                  <iframe
+                    className="map-frame"
+                    src={`https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(searchedCity.city)}`}
+                    title={`Map of ${searchedCity.city}`}
+                    allowFullScreen=""
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  ></iframe>
+                  <div className="map-info">
+                    <h3>📍 {searchedCity.city} Location</h3>
+                    <p>Latitude: {searchedCity.lat?.toFixed(4)}</p>
+                    <p>Longitude: {searchedCity.lon?.toFixed(4)}</p>
+                  </div>
+                </>
+              )}
+
+              {showMap && !GOOGLE_MAPS_API_KEY && (
+                <div className="map-info" style={{ color: '#ffaa00' }}>
+                  <h3>⚠️ Google Maps API Key Not Set</h3>
+                  <p>Add a Google Maps API key to .env.local to enable map display</p>
+                  <p style={{ fontSize: '0.85rem', marginTop: '1rem' }}>See README for setup instructions</p>
+                </div>
+              )}
+            </div>
+          )}
 
           <main className="grid">
             {weatherData.map((data, idx) => (
