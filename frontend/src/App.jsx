@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const App = () => {
   const [weatherType, setWeatherType] = useState('Sunny');
+  const [searchInput, setSearchInput] = useState('');
+  const [searchedCity, setSearchedCity] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const weatherData = [
+  const defaultCities = [
     { city: "New York", temp: 22, condition: "Sunny", wind: "12 km/h", humidity: "45%", aqi: "32", icon: "☀️" },
     { city: "London", temp: 14, condition: "Rainy", wind: "18 km/h", humidity: "82%", aqi: "18", icon: "🌧️" },
     { city: "Tokyo", temp: 19, condition: "Cloudy", wind: "10 km/h", humidity: "60%", aqi: "44", icon: "☁️" },
@@ -12,6 +16,8 @@ const App = () => {
     { city: "Dubai", temp: 35, condition: "Sunny", wind: "22 km/h", humidity: "15%", aqi: "85", icon: "🌵" },
     { city: "Mumbai", temp: 31, condition: "Rainy", wind: "25 km/h", humidity: "90%", aqi: "110", icon: "⛈️" }
   ];
+
+  const weatherData = searchedCity ? [searchedCity, ...defaultCities] : defaultCities;
 
   const themeStyles = {
     Sunny: {
@@ -33,6 +39,40 @@ const App = () => {
     Night: {
       grad: "linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)",
       color: "#fff"
+    }
+  };
+
+  const handleSearch = async (cityName) => {
+    if (!cityName.trim()) {
+      setSearchedCity(null);
+      setError('');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/weather?city=${encodeURIComponent(cityName)}`);
+      
+      if (!response.ok) {
+        throw new Error('City not found');
+      }
+
+      const data = await response.json();
+      setSearchedCity(data);
+    } catch (err) {
+      setError('❌ Could not find city. Make sure backend is running on port 5000');
+      setSearchedCity(null);
+      console.error('Search error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearchSubmit = (e) => {
+    if (e.key === 'Enter' || e.type === 'click') {
+      handleSearch(searchInput);
     }
   };
 
@@ -283,12 +323,22 @@ const App = () => {
         
         <div className="content">
           <header className="hero">
-            <h1>22°C — Mostly {weatherType}</h1>
-            <p>San Francisco, California</p>
+            <h1>{searchedCity ? `${searchedCity.temp}°C — ${searchedCity.condition}` : '22°C — Mostly Sunny'}</h1>
+            <p>{searchedCity ? `${searchedCity.city}` : 'San Francisco, California'}</p>
             
             <div className="search-container">
-              <input type="text" className="search-bar" placeholder="Search for a city..." />
+              <input 
+                type="text" 
+                className="search-bar" 
+                placeholder="Search for a city..." 
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyPress={handleSearchSubmit}
+              />
             </div>
+
+            {error && <p style={{ color: 'white', marginTop: '1rem', fontSize: '0.9rem' }}>{error}</p>}
+            {loading && <p style={{ color: 'white', marginTop: '1rem' }}>🔍 Searching...</p>}
 
             <div className="theme-switcher">
               {Object.keys(themeStyles).map(type => (
